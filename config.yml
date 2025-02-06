@@ -1,0 +1,26 @@
+version: 2.1
+jobs:
+  build-and-test:
+    docker:
+      - image: circleci/node:14
+
+    steps:
+      - checkout
+      - run: npm install
+      - run: npm test
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run: |
+          docker build -t my-node-app.
+          docker run -d -p 8080:80 my-node-app
+          sleep 10 # wait for the app to start
+          curl http://localhost:8080 # Test that the app is responding
+      - run: |
+          docker tag my-node-app $DOCKER_ID/my-node-app
+          echo $DOCKER_PASSWORD | docker login -u $DOCKER_ID --password-stdin
+          docker push $DOCKER_ID/my-node-app
+workflows:
+  version: 2.1
+  build-and-test:
+    jobs:
+      - build-and-test
